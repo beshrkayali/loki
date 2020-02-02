@@ -31,7 +31,7 @@
 ##     write(stdout, "Hello!\n")
 ##   do_EOF:
 ##     write(stdout, "Bye!\n")
-##     return false
+##     return true
 ##   default:
 ##     write(stdout, "*** Unknown syntax: ", input.text , " ***\n")
 ##
