@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  sut:
+    image: nimlang/nim:1.0.0-regular
+    stdin_open: true
+    working_dir: /usr/src/app
+    tty: true
+    command: nimble test -Y
+    volumes:
+      - ../:/usr/src/app
+
