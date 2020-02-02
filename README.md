@@ -1,12 +1,12 @@
 Loki
 ----
-[![](https://github.com/beshrkayali/loki/workflows/CI/badge.svg)](https://github.com/beshrkayali/loki/actions?query=workflow%3AC)I
+[![](https://github.com/beshrkayali/loki/workflows/CI/badge.svg)](https://github.com/beshrkayali/loki/actions?query=workflow%3AC)
 
 
 **loki**: line oriented (k)ommand interpreter
 
 Loki is a small library for writing line-oriented
-command interpreters (or cli programs) that is inspired
+command interpreters (or cli programs) in Nim, that is inspired
 by Python's cmd lib.
 
 Example
