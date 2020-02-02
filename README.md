@@ -3,9 +3,9 @@ Loki
 
 **loki**: line oriented (k)ommand interpreter
 
-Loki is a small library for # writing line-oriented
+Loki is a small library for writing line-oriented
 command interpreters (or cli programs) that is inspired
-by Python's cmdlib.
+by Python's cmd lib.
 
 Example
 =======
