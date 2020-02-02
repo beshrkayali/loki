@@ -1,5 +1,7 @@
 Loki
 ----
+[![](https://github.com/beshrkayali/loki/workflows/CI/badge.svg)](https://github.com/beshrkayali/loki/actions?query=workflow%3AC)I
+
 
 **loki**: line oriented (k)ommand interpreter
 
