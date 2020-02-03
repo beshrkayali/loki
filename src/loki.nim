@@ -205,9 +205,36 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
   )
 
   for child in stmtList:
-    expectKind(child, nnkCall)
+    expectKind(child, {nnkCall, nnkCommand})
 
     let cmd = replace(repr child[0], "do_", "")
+    let providedStmtList = child[child.len - 1]
+
+    var stmtList = newSeq[NimNode]()
+
+    if child.kind == nnkCommand:
+      let args = child[1..child.len - 2]
+      var defsTree = newSeq[NimNode]()
+
+      for a in args:
+        expectKind(a, nnkIdent)
+        defsTree.add(newIdentNode(repr a))
+
+      defsTree.add newIdentNode("string")
+      defsTree.add newEmptyNode()
+
+      stmtList.add(
+        newTree(
+          nnkVarSection,
+          newTree(
+            nnkIdentDefs,
+            defsTree
+        )
+      )
+      )
+
+    for c in providedStmtList:
+      stmtList.add(c)
 
     if cmd != "default":
       cases.add(
@@ -216,7 +243,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newStrLitNode(cmd),
           newTree(
             nnkStmtList,
-            child[1]
+            stmtList
         )
       )
       )
@@ -258,3 +285,5 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
   result = newStmtList()
   let statementNodes = createHandlerCommandStatements(statements, lineVar)
   result.add createHandlerProcDef(handlerName, lineVar, statementNodes)
+
+  echo repr result

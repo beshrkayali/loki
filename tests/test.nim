@@ -4,7 +4,7 @@ import loki
 
 test "loki macro generates valid code":
   loki(cmdHandler, line):
-    do_greet:
+    do_greet name:
       if isSome(line.args):
         echo("Hello ", line.args.get[0], "!")
       else:
