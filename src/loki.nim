@@ -235,13 +235,13 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
             nnkBracketExpr,
             newIdentNode("Option"),
             newIdentNode("string")
-          ),
-          newTree(
-            nnkCall,
-            newIdentNode("none"),
-            newIdentNode("string"),
-          )
+        ),
+        newTree(
+          nnkCall,
+          newIdentNode("none"),
+          newIdentNode("string"),
         )
+      )
       )
 
     result.add(
@@ -253,17 +253,17 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
         newTree(
           nnkFormalParams,
           identDefsStmtList,
-        ),
-        newEmptyNode(),
-        newEmptyNode(),
-        newTree(
-          nnkStmtList,
-          providedStmtList
-        )
+      ),
+      newEmptyNode(),
+      newEmptyNode(),
+      newTree(
+        nnkStmtList,
+        providedStmtList
       )
     )
+    )
 
-  
+
 proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[NimNode] =
   expectKind(stmtList, nnkStmtList)
 
@@ -318,11 +318,11 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                   nnkDotExpr,
                   newIdentNode("input"),
                   newIdentNode("args"),
-                ),
-                newIdentNode("get"),
-              )
-            )
-          )
+        ),
+        newIdentNode("get"),
+      )
+        )
+      )
         )
 
       for idx, arg in args:
@@ -337,8 +337,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                 nnkBracketExpr,
                 newIdentNode("args_"),
                 newIntLitNode(idx)
-              )
-            )
+          )
+        )
           )
         )
 
@@ -359,11 +359,11 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                     nnkDotExpr,
                     newIdentNode(repr lineVar),
                     newIdentNode("args"),
-                  )
-                ),
+          )
+        ),
                 newIntLitNode(idx)
-              )
-            )
+          )
+        )
           )
         )
 
@@ -383,8 +383,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                 nnkDotExpr,
                 newIdentNode(repr lineVar),
                 newIdentNode("args")
-              )
-            ),
+      )
+    ),
             newTree(
               nnkStmtList,
               newTree(
@@ -392,30 +392,30 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                 newTree(
                   nnkCall,
                   exprEqExprList,
-                )
-              ),
-            )
-          ),
+      )
+    ),
+      )
+    ),
           newTree(
             nnkElse,
             newTree(
               nnkStmtList,
               # providedStmtList
-              newTree(
-                nnkReturnStmt,
-                newTree(
-                  nnkCall,
-                  newIdentNode(procName),
-                  newTree(
-                    nnkExprEqExpr,
-                    newIdentNode(repr lineVar),
-                    newIdentNode(repr lineVar),
-                  )
-                )
-              )
-            )
-          )
+      newTree(
+        nnkReturnStmt,
+        newTree(
+          nnkCall,
+          newIdentNode(procName),
+          newTree(
+            nnkExprEqExpr,
+            newIdentNode(repr lineVar),
+            newIdentNode(repr lineVar),
         )
+      )
+      )
+    )
+      )
+    )
       )
     )
 
@@ -427,8 +427,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkStmtList,
             stmtList
-          )
         )
+      )
       )
     else:
       cases.add(
@@ -437,8 +437,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkStmtList,
             child[1]
-          )
         )
+      )
       )
 
   result.add(
