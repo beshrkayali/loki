@@ -26,9 +26,13 @@
 ## --------
 ##
 ## ```nim
+## import options
 ## loki(myHandler, input):
-##   do_greet:
-##     write(stdout, "Hello!\n")
+##   do_greet name:
+##     if isSome(name):
+##       write(stdout, "Hello " & get(name) & "!")
+##     else:
+##       write(stdout, "Hey you!\n")
 ##   do_EOF:
 ##     write(stdout, "Bye!\n")
 ##     return true
@@ -83,7 +87,6 @@ proc `$`*(line: Line): string =
     "Command: " & $line.command & " - Args: " & get(line.args).join(", ")
   else:
     "Command: " & $line.command
-
 
 type Loki* = ref object
   prompt*: string
@@ -144,7 +147,7 @@ proc oneCmd(loki: Loki, line_text: string): bool =
 proc cmdLoop*(loki: Loki, intro: string = "") =
   var lineFlowVar: FlowVar[string]
 
-  lineFlowVar = spawn loki.input()
+  lineFlowVar = spawn input loki
 
   write(stdout, loki.intro)
 
@@ -157,7 +160,10 @@ proc cmdLoop*(loki: Loki, intro: string = "") =
       # postcmd
 
       # Respawn
-      lineFlowVar = spawn loki.input()
+      if not stop:
+        # FIXME: Hack to prevent eager spawning
+        echo("")
+        lineFlowVar = spawn input loki
 
 
 # Macros
@@ -189,6 +195,75 @@ proc createHandlerProcDef(ident: NimNode, lineVar: NimNode, statements: seq[
   )
 
 
+proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
+  expectKind(stmtList, nnkStmtList)
+
+  result = @[]
+
+  for child in stmtList:
+    expectKind(child, {nnkCall, nnkCommand})
+
+    let procName = repr child[0]
+    let providedStmtList = child[child.len - 1]
+    let args = child[1..child.len - 2]
+
+    #TODO: Create procs to handle each one of the cases
+    # Call func in each branch of condition
+    # Proc args should be optional strings
+
+    var identDefsStmtList = newSeq[NimNode]()
+
+    identDefsStmtList.add(
+      newIdentNode("bool")
+    )
+
+    identDefsStmtList.add(
+      newTree(
+        nnkIdentDefs,
+        newIdentNode(repr lineVar),
+        newIdentNode("Line"),
+        newEmptyNode()
+      )
+    )
+
+    for arg in args:
+      identDefsStmtList.add(
+        newTree(
+          nnkIdentDefs,
+          newIdentNode(repr arg),
+          newTree(
+            nnkBracketExpr,
+            newIdentNode("Option"),
+            newIdentNode("string")
+          ),
+          newTree(
+            nnkCall,
+            newIdentNode("none"),
+            newIdentNode("string"),
+          )
+        )
+      )
+
+    result.add(
+      newTree(
+        nnkProcDef,
+        newIdentNode(procName),
+        newEmptyNode(),
+        newEmptyNode(),
+        newTree(
+          nnkFormalParams,
+          identDefsStmtList,
+        ),
+        newEmptyNode(),
+        newEmptyNode(),
+        newTree(
+          nnkStmtList,
+          providedStmtList
+        )
+      )
+    )
+
+  
 proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[NimNode] =
   expectKind(stmtList, nnkStmtList)
 
@@ -205,9 +280,144 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
   )
 
   for child in stmtList:
-    expectKind(child, nnkCall)
+    expectKind(child, {nnkCall, nnkCommand})
 
-    let cmd = replace(repr child[0], "do_", "")
+    let procName = repr child[0]
+    let cmd = replace(procName, "do_", "")
+    # let providedStmtList = child[child.len - 1]
+
+    var letStmtList = newSeq[NimNode]()
+    var exprEqExprList = newSeq[NimNode]()
+
+    exprEqExprList.add(
+      newIdentNode(procName)
+    )
+
+    exprEqExprList.add(
+      newTree(
+        nnkExprEqExpr,
+        newIdentNode(repr lineVar),
+        newIdentNode(repr lineVar),
+      )
+    )
+
+    if child.kind == nnkCommand:
+      let args = child[1..child.len - 2]
+      # var defsTree = newSeq[NimNode]()
+
+      letStmtList.add(
+          newTree(
+            nnkLetSection,
+            newTree(
+              nnkIdentDefs,
+              newIdentNode("args_"),
+              newEmptyNode(),
+              newTree(
+                nnkDotExpr,
+                newTree(
+                  nnkDotExpr,
+                  newIdentNode("input"),
+                  newIdentNode("args"),
+                ),
+                newIdentNode("get"),
+              )
+            )
+          )
+        )
+
+      for idx, arg in args:
+        letStmtList.add(
+          newTree(
+            nnkLetSection,
+            newTree(
+              nnkIdentDefs,
+              newIdentNode(repr arg),
+              newIdentNode("string"),
+              newTree(
+                nnkBracketExpr,
+                newIdentNode("args_"),
+                newIntLitNode(idx)
+              )
+            )
+          )
+        )
+
+        # Proc call args
+        exprEqExprList.add(
+          newTree(
+            nnkExprEqExpr,
+            newIdentNode(repr arg),
+            newTree(
+              nnkCall,
+              newIdentNode("some"),
+              newTree(
+                nnkBracketExpr,
+                newTree(
+                  nnkCall,
+                  newIdentNode("get"),
+                  newTree(
+                    nnkDotExpr,
+                    newIdentNode(repr lineVar),
+                    newIdentNode("args"),
+                  )
+                ),
+                newIntLitNode(idx)
+              )
+            )
+          )
+        )
+
+    var stmtList = newSeq[NimNode]()
+
+    stmtList.add(
+      newTree(
+        nnkStmtList,
+        newTree(
+          nnkIfStmt,
+          newTree(
+            nnkElifBranch,
+            newTree(
+              nnkCall,
+              newIdentNode("isSome"),
+              newTree(
+                nnkDotExpr,
+                newIdentNode(repr lineVar),
+                newIdentNode("args")
+              )
+            ),
+            newTree(
+              nnkStmtList,
+              newTree(
+                nnkReturnStmt,
+                newTree(
+                  nnkCall,
+                  exprEqExprList,
+                )
+              ),
+            )
+          ),
+          newTree(
+            nnkElse,
+            newTree(
+              nnkStmtList,
+              # providedStmtList
+              newTree(
+                nnkReturnStmt,
+                newTree(
+                  nnkCall,
+                  newIdentNode(procName),
+                  newTree(
+                    nnkExprEqExpr,
+                    newIdentNode(repr lineVar),
+                    newIdentNode(repr lineVar),
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
 
     if cmd != "default":
       cases.add(
@@ -216,9 +426,9 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newStrLitNode(cmd),
           newTree(
             nnkStmtList,
-            child[1]
+            stmtList
+          )
         )
-      )
       )
     else:
       cases.add(
@@ -227,8 +437,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkStmtList,
             child[1]
+          )
         )
-      )
       )
 
   result.add(
@@ -246,15 +456,26 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
 
   runnableExamples:
     loki(cmdHandler, line):
-      do_greet:
-        if isSome(line.args):
-          echo("Hello ", line.args.get[0], "!")
+      do_greet name:
+        if isSome(name):
+          write(stdout, "Hello " & get(name) & "!")
         else:
-          echo("Hello!")
+          write(stdout, "Hey you!\n")
 
       do_EOF:
         quit()
 
   result = newStmtList()
+  let handlerCasesProcDefs = createdProcDefs(lineVar, statements)
+
+  result.add(
+    newTree(
+      nnkStmtList,
+      handlerCasesProcDefs
+    )
+  )
+
   let statementNodes = createHandlerCommandStatements(statements, lineVar)
   result.add createHandlerProcDef(handlerName, lineVar, statementNodes)
+
+  echo repr result
