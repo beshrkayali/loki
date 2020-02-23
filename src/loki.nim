@@ -100,14 +100,12 @@ proc newLoki*(
   handler: proc (line: Line): bool,
   intro: string = "",
   prompt: string = PROMPT,
-  # completekey: string="tab",
 ): Loki =
 
   Loki(
-    prompt: PROMPT,
+    prompt: prompt,
     lastcmd: "",
     intro: intro & "\n",
-    # completekey: completekey,
     handler: handler
   )
 
@@ -184,8 +182,8 @@ proc createHandlerProcDef(ident: NimNode, lineVar: NimNode, statements: seq[
         newIdentNode(repr lineVar),
         newIdentNode("Line"),
         newEmptyNode()
-    )
-  ),
+      )
+    ),
     newEmptyNode(),
     newEmptyNode(),
     newTree(
@@ -206,10 +204,6 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
     let procName = repr child[0]
     let providedStmtList = child[child.len - 1]
     let args = child[1..child.len - 2]
-
-    #TODO: Create procs to handle each one of the cases
-    # Call func in each branch of condition
-    # Proc args should be optional strings
 
     var identDefsStmtList = newSeq[NimNode]()
 
@@ -235,13 +229,13 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
             nnkBracketExpr,
             newIdentNode("Option"),
             newIdentNode("string")
-        ),
-        newTree(
-          nnkCall,
-          newIdentNode("none"),
-          newIdentNode("string"),
+          ),
+          newTree(
+            nnkCall,
+            newIdentNode("none"),
+            newIdentNode("string"),
+          )
         )
-      )
       )
 
     result.add(
@@ -253,14 +247,14 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
         newTree(
           nnkFormalParams,
           identDefsStmtList,
-      ),
-      newEmptyNode(),
-      newEmptyNode(),
-      newTree(
-        nnkStmtList,
-        providedStmtList
+        ),
+        newEmptyNode(),
+        newEmptyNode(),
+        newTree(
+          nnkStmtList,
+          providedStmtList
+        )
       )
-    )
     )
 
 
@@ -284,9 +278,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
 
     let procName = repr child[0]
     let cmd = replace(procName, "do_", "")
-    # let providedStmtList = child[child.len - 1]
 
-    var letStmtList = newSeq[NimNode]()
     var exprEqExprList = newSeq[NimNode]()
 
     exprEqExprList.add(
@@ -305,43 +297,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
       let args = child[1..child.len - 2]
       # var defsTree = newSeq[NimNode]()
 
-      letStmtList.add(
-          newTree(
-            nnkLetSection,
-            newTree(
-              nnkIdentDefs,
-              newIdentNode("args_"),
-              newEmptyNode(),
-              newTree(
-                nnkDotExpr,
-                newTree(
-                  nnkDotExpr,
-                  newIdentNode("input"),
-                  newIdentNode("args"),
-        ),
-        newIdentNode("get"),
-      )
-        )
-      )
-        )
-
       for idx, arg in args:
-        letStmtList.add(
-          newTree(
-            nnkLetSection,
-            newTree(
-              nnkIdentDefs,
-              newIdentNode(repr arg),
-              newIdentNode("string"),
-              newTree(
-                nnkBracketExpr,
-                newIdentNode("args_"),
-                newIntLitNode(idx)
-          )
-        )
-          )
-        )
-
         # Proc call args
         exprEqExprList.add(
           newTree(
@@ -359,11 +315,11 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                     nnkDotExpr,
                     newIdentNode(repr lineVar),
                     newIdentNode("args"),
-          )
-        ),
+                  )
+                ),
                 newIntLitNode(idx)
-          )
-        )
+              )
+            )
           )
         )
 
@@ -383,8 +339,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                 nnkDotExpr,
                 newIdentNode(repr lineVar),
                 newIdentNode("args")
-      )
-    ),
+              )
+            ),
             newTree(
               nnkStmtList,
               newTree(
@@ -392,30 +348,29 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
                 newTree(
                   nnkCall,
                   exprEqExprList,
-      )
-    ),
-      )
-    ),
+                )
+              ),
+            )
+          ),
           newTree(
             nnkElse,
             newTree(
               nnkStmtList,
-              # providedStmtList
-      newTree(
-        nnkReturnStmt,
-        newTree(
-          nnkCall,
-          newIdentNode(procName),
-          newTree(
-            nnkExprEqExpr,
-            newIdentNode(repr lineVar),
-            newIdentNode(repr lineVar),
+              newTree(
+                nnkReturnStmt,
+                newTree(
+                  nnkCall,
+                  newIdentNode(procName),
+                  newTree(
+                    nnkExprEqExpr,
+                    newIdentNode(repr lineVar),
+                    newIdentNode(repr lineVar),
+                  )
+                )
+              )
+            )
+          )
         )
-      )
-      )
-    )
-      )
-    )
       )
     )
 
@@ -427,8 +382,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkStmtList,
             stmtList
+          )
         )
-      )
       )
     else:
       cases.add(
@@ -437,8 +392,8 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkStmtList,
             child[1]
+          )
         )
-      )
       )
 
   result.add(
