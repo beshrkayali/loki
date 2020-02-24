@@ -391,7 +391,18 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           nnkElse,
           newTree(
             nnkStmtList,
-            child[1]
+            newTree(
+              nnkReturnStmt,
+              newTree(
+                nnkCall,
+                newIdentNode("default"),
+                newTree(
+                  nnkExprEqExpr,
+                  newIdentNode(repr lineVar),
+                  newIdentNode(repr lineVar),
+                )
+              )
+            )
           )
         )
       )
