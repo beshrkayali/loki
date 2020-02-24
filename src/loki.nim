@@ -432,5 +432,3 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
 
   let statementNodes = createHandlerCommandStatements(statements, lineVar)
   result.add createHandlerProcDef(handlerName, lineVar, statementNodes)
-
-  echo repr result
