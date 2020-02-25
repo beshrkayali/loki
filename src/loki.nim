@@ -186,8 +186,7 @@ proc createHandlerProcDef(ident: NimNode, lineVar: NimNode, statements: seq[
     ),
     newEmptyNode(),
     newEmptyNode(),
-    newTree(
-      nnkStmtList,
+    newStmtList(
       statements
     )
   )
@@ -222,16 +221,14 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
 
     for arg in args:
       identDefsStmtList.add(
-        newTree(
-          nnkIdentDefs,
+        newIdentDefs(
           newIdentNode(repr arg),
-          newTree(
+          kind=newTree(
             nnkBracketExpr,
             newIdentNode("Option"),
             newIdentNode("string")
           ),
-          newTree(
-            nnkCall,
+          default=newCall(
             newIdentNode("none"),
             newIdentNode("string"),
           )
@@ -250,8 +247,7 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
         ),
         newEmptyNode(),
         newEmptyNode(),
-        newTree(
-          nnkStmtList,
+        newStmtList(
           providedStmtList
         )
       )
@@ -266,8 +262,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
   var cases = newSeq[NimNode]()
 
   cases.add(
-    newTree(
-      nnkDotExpr,
+    newDotExpr(
       newIdentNode(repr lineVar),
       newIdentNode("command"),
     )
@@ -303,46 +298,39 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           newTree(
             nnkExprEqExpr,
             newIdentNode(repr arg),
-            newTree(
-              nnkCall,
+            newCall(
               newIdentNode("some"),
               newTree(
                 nnkBracketExpr,
-                newTree(
-                  nnkCall,
+                newCall(
                   newIdentNode("get"),
-                  newTree(
-                    nnkDotExpr,
+                  newDotExpr(
                     newIdentNode(repr lineVar),
                     newIdentNode("args"),
                   )
                 ),
                 newIntLitNode(idx)
               )
-            )
+            ),
           )
         )
 
     var stmtList = newSeq[NimNode]()
 
     stmtList.add(
-      newTree(
-        nnkStmtList,
+      newStmtList(
         newTree(
           nnkIfStmt,
           newTree(
             nnkElifBranch,
-            newTree(
-              nnkCall,
+            newCall(
               newIdentNode("isSome"),
-              newTree(
-                nnkDotExpr,
+              newDotExpr(
                 newIdentNode(repr lineVar),
                 newIdentNode("args")
               )
             ),
-            newTree(
-              nnkStmtList,
+            newStmtList(
               newTree(
                 nnkReturnStmt,
                 newTree(
@@ -354,18 +342,12 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
           ),
           newTree(
             nnkElse,
-            newTree(
-              nnkStmtList,
+            newStmtList(
               newTree(
                 nnkReturnStmt,
-                newTree(
-                  nnkCall,
+                newCall(
                   newIdentNode(procName),
-                  newTree(
-                    nnkExprEqExpr,
-                    newIdentNode(repr lineVar),
-                    newIdentNode(repr lineVar),
-                  )
+                  newIdentNode(repr lineVar)
                 )
               )
             )
@@ -379,8 +361,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
         newTree(
           nnkOfBranch,
           newStrLitNode(cmd),
-          newTree(
-            nnkStmtList,
+          newStmtList(
             stmtList
           )
         )
@@ -389,18 +370,12 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
       cases.add(
         newTree(
           nnkElse,
-          newTree(
-            nnkStmtList,
+          newStmtList(
             newTree(
               nnkReturnStmt,
-              newTree(
-                nnkCall,
+              newCall(
                 newIdentNode("default"),
-                newTree(
-                  nnkExprEqExpr,
-                  newIdentNode(repr lineVar),
-                  newIdentNode(repr lineVar),
-                )
+                newIdentNode(repr lineVar)
               )
             )
           )
@@ -427,7 +402,6 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
           write(stdout, "Hello " & get(name) & "!")
         else:
           write(stdout, "Hey you!\n")
-
       do_EOF:
         quit()
 
@@ -435,10 +409,9 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
   let handlerCasesProcDefs = createdProcDefs(lineVar, statements)
 
   result.add(
-    newTree(
-      nnkStmtList,
+    newStmtList(
       handlerCasesProcDefs
-    )
+    ),
   )
 
   let statementNodes = createHandlerCommandStatements(statements, lineVar)
