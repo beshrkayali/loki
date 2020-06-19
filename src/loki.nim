@@ -64,12 +64,18 @@ type Line* = ref object of RootObj
   text*: string
 
 
+proc pick*[T](items: Option[seq[T]], idx: int): Option[T] =
+  items.flatMap(
+    proc (values: seq[T]): Option[T] =
+      if idx < values.len:
+        return some(values[idx])
+  )
+
 proc newLine(line_text: string): Line =
   let line = line_text.split(' ')
   let command = line[0]
 
   var args: Option[seq[string]]
-
 
   if line.len > 1:
     args = some(toSeq line[1..line.len - 1])
@@ -299,19 +305,13 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
             nnkExprEqExpr,
             newIdentNode(repr arg),
             newCall(
-              newIdentNode("some"),
-              newTree(
-                nnkBracketExpr,
-                newCall(
-                  newIdentNode("get"),
-                  newDotExpr(
-                    newIdentNode(repr lineVar),
-                    newIdentNode("args"),
-                  )
-                ),
-                newIntLitNode(idx)
-              )
-            ),
+              newIdentNode("pick"),
+              newDotExpr(
+                newIdentNode(repr lineVar),
+                newIdentNode("args"),
+              ),
+              newIntLitNode(idx)
+            )
           )
         )
 

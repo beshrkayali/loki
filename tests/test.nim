@@ -18,3 +18,17 @@ test "loki macro generates valid code":
       quit()
 
   let cmd = newLoki(cmdHandler)
+
+test "loki macro genereted code shouldnt fail with less args":
+  loki(shouldNotFailHandler, line):
+    do_add num0, num1, num2:
+      assert(num0.isSome)
+      assert(num1.isNone)
+      assert(num2.isNone)
+  let cmd = newLoki(shouldNotFailHandler)
+  let line = Line(
+    command: "add",
+    args: some(@["0"]),
+    text: "add 0"
+  )
+  discard shouldNotFailHandler(line)
