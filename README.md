@@ -14,9 +14,11 @@ Example
 
 ```nim
 import loki, strutils, options
+from sequtils import zip
 
 loki(myHandler, input):
   do_greet name:
+   ## Get a nice greeting!
    if isSome(name):
     echo("Hello ", name.get, "!")
    else:
@@ -48,22 +50,8 @@ nim c --threads:on cmd.nim
 
 And an example run:
 
-```sh
-$ ./cmd 
-Welcome to my CLI!
+[![asciicast](https://asciinema.org/a/iMA7pIq2f7sy8X44pkCPhNmOt.svg)](https://asciinema.org/a/iMA7pIq2f7sy8X44pkCPhNmOt)
 
-(loki) greet
-Hello there!
-
-(loki) greet Beshr
-Hello Beshr!
-
-(loki) add
-Provide two numbers to add them
-
-(loki) add 1 2
-Result is 3
-```
 
 ### How it works?
 
@@ -73,48 +61,88 @@ execute at compile-time and can transform a syntax tree into a different one.
 The `loki` macro block in the example above would expand into something like this: 
 
 ```nim
-proc do_greet(input: Line; name: Option[string] = none(string)): bool =
+proc do_greet(line: Line; name: Option[string] = none(string)): bool =
+  ## Get a nice greeting!
   if isSome(name):
     echo(["Hello ", get(name), "!"])
   else:
-    echo(["Hello there!"])
-
-proc do_add(input: Line; num1: Option[string] = none(string);
+    echo(["Hello!"])
+  
+proc do_add(line: Line; num1: Option[string] = none(string);
             num2: Option[string] = none(string)): bool =
   if isSome(num1) and isSome(num2):
     echo(["Result is ", parseInt(get(num1)) + parseInt(get(num2))])
   else:
     echo(["Provide two numbers to add them"])
 
-proc do_EOF(input: Line): bool =
+proc do_EOF(line: Line): bool =
   write(stdout, "Bye!\n")
   return true
 
-proc default(input: Line): bool =
-  write(stdout, ["*** Unknown syntax: ", input.text, " ***\n"])
+proc default(line: Line): bool =
+  write(stdout, ["*** Unknown syntax: ", line.text, " ***\n"])
 
+proc help(input: Line): bool =
+  var undocced: seq[string] = @["add"]
+  var docced: seq[string] = @["greet"]
+  var docs = @["d1", "d2"]
+  if isSome(input.args):
+    var cmdarg = pick(input.args, 0)
+    if isSome(cmdarg):
+      var cmd = get(cmdarg)
+      if contains(undocced, cmd):
+        write(stdout, "*** No help on for this")
+      else:
+        for pair in items(zip(docced, docs)):
+          let (docced_cmd, doc) = pair
+          if cmd == docced_cmd:
+            write(stdout, doc)
+            break
+      return
+  write(stdout, "\nDocumented commands (type help <topic>):\n")
+  write(stdout, "========================================\n")
+  write(stdout, join(docced, " \t "))
+  write(stdout, "\n\nUndocumented commands:\n")
+  write(stdout, "======================\n")
+  write(stdout, join(undocced, " \t "))
+  write(stdout, "\n")
 
-proc myHandler(input: Line): bool =
-  case input.command
+proc cmdHandler(line: Line): bool =
+  case line.command
   of "greet":
-    if isSome(input.args):
-      return do_greet(input, pick(input.args, 0))
+    if isSome(line.args):
+      return do_greet(line, pick(line.args, 0))
     else:
-      return do_greet(input, none(string))
+      return do_greet(line, none(string))
   of "add":
-    if isSome(input.args):
-      return do_add(input, pick(input.args, 0), pick(input.args, 1))
+    if isSome(line.args):
+      return do_add(line, pick(line.args, 0), pick(line.args, 1))
     else:
-      return do_add(input, none(string), none(string))
+      return do_add(line, none(string), none(string))
   of "EOF":
-    if isSome(input.args):
-      return do_EOF(input)
+    if isSome(line.args):
+      return do_EOF(line)
     else:
-      return do_EOF(input)
+      return do_EOF(line)
+  of "help":
+    return help(line)
   else:
-    return default(input)
+    return default(line)
 ```
 
 Tip: The expanded code above (of the `loki` macro) can be printed using
 [`expandMacros`](https://nim-lang.org/docs/macros.html#expandMacros.m%2Ctyped )
 which can be helpful when debugging your code to see what's going on.
+
+
+### Changelog
+
+### [0.2.1] Jun 2020
+- Fix for handling extra args (thanks @hugosenari)
+
+### [0.1.1] Feb 2020
+- Run tests on GH actions
+- Minor docs
+
+### [0.1.0] Feb 2020
+- Initial release
