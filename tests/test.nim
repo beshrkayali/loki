@@ -1,4 +1,5 @@
 import unittest, options
+from sequtils import zip
 import strutils
 import loki
 
@@ -10,6 +11,7 @@ test "loki macro generates valid code":
       else:
         echo("Hello!")
     do_add num1, num2:
+      ## Does addition
       if isSome(num1) and isSome(num2):
         echo("Result is ", parseInt(num1.get) + parseInt(num2.get))
       else:

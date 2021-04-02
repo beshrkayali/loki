@@ -98,6 +98,9 @@ type Loki* = ref object
   prompt*: string
   lastcmd*: string
   intro*: string
+  doc_header*: string
+  undoc_header*: string
+  nohelp*: string
   # completekey*: string
   handler: proc (line: Line): bool
 
@@ -112,6 +115,9 @@ proc newLoki*(
     prompt: prompt,
     lastcmd: "",
     intro: intro & "\n",
+    doc_header: "Documented commands (type help <topic>):",
+    undoc_header: "",
+    nohelp: "*** No help on {cmd}",
     handler: handler
   )
 
@@ -131,7 +137,6 @@ proc input(loki: Loki): string =
     readLineFromStdin(loki.prompt)
   except IOError: # Linenoise returns nil (and raises IOError) on EOF
     "EOF"
-
 
 proc oneCmd(loki: Loki, line_text: string): bool =
   ## Interprets line_text as though it had been typed in response
@@ -175,6 +180,7 @@ proc cmdLoop*(loki: Loki, intro: string = "") =
 
 proc createHandlerProcDef(ident: NimNode, lineVar: NimNode, statements: seq[
     NimNode]): NimNode =
+
   result = newTree(
     nnkProcDef,
     newIdentNode(repr ident),
@@ -203,11 +209,26 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
 
   result = @[]
 
+  var undocced: seq[string]
+  var docced: seq[string]
+  var docs: seq[string]
+
   for child in stmtList:
     expectKind(child, {nnkCall, nnkCommand})
 
     let procName = repr child[0]
     let providedStmtList = child[child.len - 1]
+
+    let cmd = replace(procName, "do_", "")
+
+    case kind providedStmtList[0]
+    of NimNodeKind.nnkCommentStmt:
+      docced.add cmd
+      docs.add strip replace(repr providedStmtList[0], "##", "")
+    else:
+      if count(cmd, "EOF") == 0 and count(cmd, "default") == 0:
+        undocced.add cmd
+
     let args = child[1..child.len - 2]
 
     var identDefsStmtList = newSeq[NimNode]()
@@ -259,8 +280,232 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
       )
     )
 
+  var undoccedNode: NimNode = nnkBracket.newTree(
+    map(undocced, proc(x: string): NimNode = newLit(x))
+  )
 
-proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[NimNode] =
+  var doccedNode: NimNode = nnkBracket.newTree(
+    map(docced, proc(x: string): NimNode = newLit(x))
+  )
+
+  var docsNode: NimNode = nnkBracket.newTree(
+    map(docs, proc(x: string): NimNode = newLit(x))
+  )
+
+  # Table of content proc
+  result.add(
+    nnkProcDef.newTree(
+      newIdentNode("help"),
+      newEmptyNode(),
+      newEmptyNode(),
+      nnkFormalParams.newTree(
+        newIdentNode("bool"),
+        nnkIdentDefs.newTree(
+          newIdentNode("input"),
+          newIdentNode("Line"),
+          newEmptyNode()
+        )
+      ),
+      newEmptyNode(),
+      newEmptyNode(),
+      nnkStmtList.newTree(
+        nnkVarSection.newTree(
+          nnkIdentDefs.newTree(
+            newIdentNode("undocced"),
+            nnkBracketExpr.newTree(
+              newIdentNode("seq"),
+              newIdentNode("string")
+            ),
+            nnkPrefix.newTree(
+              newIdentNode("@"),
+              undoccedNode
+            )
+          )
+        ),
+        nnkVarSection.newTree(
+          nnkIdentDefs.newTree(
+            newIdentNode("docced"),
+            nnkBracketExpr.newTree(
+              newIdentNode("seq"),
+              newIdentNode("string")
+            ),
+            nnkPrefix.newTree(
+              newIdentNode("@"),
+              doccedNode
+            )
+          )
+        ),
+        nnkVarSection.newTree(
+          nnkIdentDefs.newTree(
+            newIdentNode("docs"),
+            nnkBracketExpr.newTree(
+              newIdentNode("seq"),
+              newIdentNode("string")
+            ),
+            nnkPrefix.newTree(
+              newIdentNode("@"),
+              docsNode
+            )
+          )
+        ),
+        nnkIfStmt.newTree(
+          nnkElifBranch.newTree(
+            nnkCall.newTree(
+              newIdentNode("isSome"),
+              nnkDotExpr.newTree(
+                newIdentNode("input"),
+                newIdentNode("args")
+              )
+            ),
+            nnkStmtList.newTree(
+              nnkVarSection.newTree(
+                nnkIdentDefs.newTree(
+                  newIdentNode("cmdarg"),
+                  newEmptyNode(),
+                  nnkCall.newTree(
+                    newIdentNode("pick"),
+                    nnkDotExpr.newTree(
+                      newIdentNode("input"),
+                      newIdentNode("args")
+                    ),
+                    newLit(0)
+                  )
+                )
+              ),
+              nnkIfStmt.newTree(
+                nnkElifBranch.newTree(
+                  nnkCall.newTree(
+                    newIdentNode("isSome"),
+                    newIdentNode("cmdarg")
+                  ),
+                  nnkStmtList.newTree(
+                    nnkVarSection.newTree(
+                      nnkIdentDefs.newTree(
+                        newIdentNode("cmd"),
+                        newEmptyNode(),
+                        nnkDotExpr.newTree(
+                          newIdentNode("cmdarg"),
+                          newIdentNode("get")
+                        )
+                      )
+                    ),
+                    nnkIfStmt.newTree(
+                      nnkElifBranch.newTree(
+                        nnkInfix.newTree(
+                          newIdentNode("in"),
+                          newIdentNode("cmd"),
+                          newIdentNode("undocced")
+                        ),
+                        nnkStmtList.newTree(
+                          nnkCall.newTree(
+                            newIdentNode("write"),
+                            newIdentNode("stdout"),
+                            newLit("*** No help on for this command")
+                          )
+                        )
+                      ),
+                      nnkElse.newTree(
+                        nnkStmtList.newTree(
+                          nnkForStmt.newTree(
+                            newIdentNode("pair"),
+                            nnkCall.newTree(
+                              newIdentNode("zip"),
+                              newIdentNode("docced"),
+                              newIdentNode("docs")
+                            ),
+                            nnkStmtList.newTree(
+                              nnkLetSection.newTree(
+                                nnkVarTuple.newTree(
+                                  newIdentNode("docced_cmd"),
+                                  newIdentNode("doc"),
+                                  newEmptyNode(),
+                                  newIdentNode("pair")
+                                )
+                              ),
+                              nnkIfStmt.newTree(
+                                nnkElifBranch.newTree(
+                                  nnkInfix.newTree(
+                                    newIdentNode("=="),
+                                    newIdentNode("cmd"),
+                                    newIdentNode("docced_cmd")
+                                  ),
+                                  nnkStmtList.newTree(
+                                    nnkCall.newTree(
+                                      newIdentNode("write"),
+                                      newIdentNode("stdout"),
+                                      newIdentNode("doc")
+                                    ),
+                                    nnkBreakStmt.newTree(
+                                      newEmptyNode()
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      )
+                    ),
+                    nnkReturnStmt.newTree(
+                      newEmptyNode()
+                    )
+                  )
+                )
+              )
+            )
+          )
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          newLit("\nDocumented commands (type help <topic>):\n")
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          newLit("========================================\n")
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          nnkCall.newTree(
+            newIdentNode("join"),
+            newIdentNode("docced"),
+            newLit(" \t ")
+          )
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          newLit("\n\nUndocumented commands:\n")
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          newLit("======================\n")
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          nnkCall.newTree(
+            newIdentNode("join"),
+            newIdentNode("undocced"),
+            newLit(" \t ")
+          )
+        ),
+        nnkCall.newTree(
+          newIdentNode("write"),
+          newIdentNode("stdout"),
+          newLit("\n")
+        )
+      )
+    )
+  )
+
+
+
+proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode,): seq[NimNode] =
+
   expectKind(stmtList, nnkStmtList)
 
   result = @[]
@@ -357,6 +602,7 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
     )
 
     if cmd != "default":
+      # cases of branches for case block
       cases.add(
         newTree(
           nnkOfBranch,
@@ -367,6 +613,23 @@ proc createHandlerCommandStatements(stmtList: NimNode, lineVar: NimNode): seq[Ni
         )
       )
     else:
+      # `help`/of branch for case block
+      cases.add(
+        newTree(
+          nnkOfBranch,
+          newStrLitNode("help"),
+          newStmtList(
+            newTree(
+              nnkReturnStmt,
+              newCall(
+                newIdentNode("help"),
+                newIdentNode(repr lineVar)
+              )
+            )
+          )
+        )
+      )
+      # `default`/else branch for case block
       cases.add(
         newTree(
           nnkElse,
@@ -408,11 +671,7 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
   result = newStmtList()
   let handlerCasesProcDefs = createdProcDefs(lineVar, statements)
 
-  result.add(
-    newStmtList(
-      handlerCasesProcDefs
-    ),
-  )
+  result.add newStmtList handlerCasesProcDefs
 
   let statementNodes = createHandlerCommandStatements(statements, lineVar)
   result.add createHandlerProcDef(handlerName, lineVar, statementNodes)
