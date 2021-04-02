@@ -137,6 +137,9 @@ which can be helpful when debugging your code to see what's going on.
 
 ### Changelog
 
+### [0.3.0] Apr 2021
+- Automatically generate TOC and help for handler commands
+
 ### [0.2.1] Jun 2020
 - Fix for handling extra args (thanks @hugosenari)
 
