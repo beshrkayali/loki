@@ -1,12 +1,20 @@
 name: CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.nim == 'devel' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        nim: ['1.6.x', '2.0.x', '2.2.x', 'devel']
     steps:
-      - uses: actions/checkout@v1
-      - name: docker compose up and test
-        run: |
-          make docker-test
+      - uses: actions/checkout@v6
+      - uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: ${{ matrix.nim }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run tests
+        run: nimble test -y
