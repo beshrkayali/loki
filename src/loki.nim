@@ -186,6 +186,13 @@ proc createHandlerProcDef(ident: NimNode, lineVar: NimNode, statements: seq[
   )
 
 
+proc strSeqLit(items: seq[string]): NimNode =
+  ## Build a `@["a", "b", ...]` seq literal node from a seq of strings.
+  result = nnkPrefix.newTree(ident"@", nnkBracket.newTree())
+  for s in items:
+    result[1].add newLit(s)
+
+
 proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
   expectKind(stmtList, nnkStmtList)
 
@@ -262,226 +269,36 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
       )
     )
 
-  var undoccedNode: NimNode = nnkBracket.newTree(
-    map(undocced, proc(x: string): NimNode = newLit(x))
-  )
+  # Generated help / table-of-contents proc.
+  let undoccedLit = strSeqLit(undocced)
+  let doccedLit = strSeqLit(docced)
+  let docsLit = strSeqLit(docs)
 
-  var doccedNode: NimNode = nnkBracket.newTree(
-    map(docced, proc(x: string): NimNode = newLit(x))
-  )
-
-  var docsNode: NimNode = nnkBracket.newTree(
-    map(docs, proc(x: string): NimNode = newLit(x))
-  )
-
-  # Table of content proc
-  result.add(
-    nnkProcDef.newTree(
-      newIdentNode("help"),
-      newEmptyNode(),
-      newEmptyNode(),
-      nnkFormalParams.newTree(
-        newIdentNode("bool"),
-        nnkIdentDefs.newTree(
-          newIdentNode("input"),
-          newIdentNode("Line"),
-          newEmptyNode()
-        )
-      ),
-      newEmptyNode(),
-      newEmptyNode(),
-      nnkStmtList.newTree(
-        nnkVarSection.newTree(
-          nnkIdentDefs.newTree(
-            newIdentNode("undocced"),
-            nnkBracketExpr.newTree(
-              newIdentNode("seq"),
-              newIdentNode("string")
-            ),
-            nnkPrefix.newTree(
-              newIdentNode("@"),
-              undoccedNode
-            )
-          )
-        ),
-        nnkVarSection.newTree(
-          nnkIdentDefs.newTree(
-            newIdentNode("docced"),
-            nnkBracketExpr.newTree(
-              newIdentNode("seq"),
-              newIdentNode("string")
-            ),
-            nnkPrefix.newTree(
-              newIdentNode("@"),
-              doccedNode
-            )
-          )
-        ),
-        nnkVarSection.newTree(
-          nnkIdentDefs.newTree(
-            newIdentNode("docs"),
-            nnkBracketExpr.newTree(
-              newIdentNode("seq"),
-              newIdentNode("string")
-            ),
-            nnkPrefix.newTree(
-              newIdentNode("@"),
-              docsNode
-            )
-          )
-        ),
-        nnkIfStmt.newTree(
-          nnkElifBranch.newTree(
-            nnkCall.newTree(
-              newIdentNode("isSome"),
-              nnkDotExpr.newTree(
-                newIdentNode("input"),
-                newIdentNode("args")
-              )
-            ),
-            nnkStmtList.newTree(
-              nnkVarSection.newTree(
-                nnkIdentDefs.newTree(
-                  newIdentNode("cmdarg"),
-                  newEmptyNode(),
-                  nnkCall.newTree(
-                    newIdentNode("pick"),
-                    nnkDotExpr.newTree(
-                      newIdentNode("input"),
-                      newIdentNode("args")
-                    ),
-                    newLit(0)
-                  )
-                )
-              ),
-              nnkIfStmt.newTree(
-                nnkElifBranch.newTree(
-                  nnkCall.newTree(
-                    newIdentNode("isSome"),
-                    newIdentNode("cmdarg")
-                  ),
-                  nnkStmtList.newTree(
-                    nnkVarSection.newTree(
-                      nnkIdentDefs.newTree(
-                        newIdentNode("cmd"),
-                        newEmptyNode(),
-                        nnkDotExpr.newTree(
-                          newIdentNode("cmdarg"),
-                          newIdentNode("get")
-                        )
-                      )
-                    ),
-                    nnkIfStmt.newTree(
-                      nnkElifBranch.newTree(
-                        nnkInfix.newTree(
-                          newIdentNode("in"),
-                          newIdentNode("cmd"),
-                          newIdentNode("undocced")
-                        ),
-                        nnkStmtList.newTree(
-                          nnkCall.newTree(
-                            newIdentNode("write"),
-                            newIdentNode("stdout"),
-                            newLit("*** No help on for this command")
-                          )
-                        )
-                      ),
-                      nnkElse.newTree(
-                        nnkStmtList.newTree(
-                          nnkForStmt.newTree(
-                            newIdentNode("pair"),
-                            nnkCall.newTree(
-                              newIdentNode("zip"),
-                              newIdentNode("docced"),
-                              newIdentNode("docs")
-                            ),
-                            nnkStmtList.newTree(
-                              nnkLetSection.newTree(
-                                nnkVarTuple.newTree(
-                                  newIdentNode("docced_cmd"),
-                                  newIdentNode("doc"),
-                                  newEmptyNode(),
-                                  newIdentNode("pair")
-                                )
-                              ),
-                              nnkIfStmt.newTree(
-                                nnkElifBranch.newTree(
-                                  nnkInfix.newTree(
-                                    newIdentNode("=="),
-                                    newIdentNode("cmd"),
-                                    newIdentNode("docced_cmd")
-                                  ),
-                                  nnkStmtList.newTree(
-                                    nnkCall.newTree(
-                                      newIdentNode("write"),
-                                      newIdentNode("stdout"),
-                                      newIdentNode("doc")
-                                    ),
-                                    nnkBreakStmt.newTree(
-                                      newEmptyNode()
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      )
-                    ),
-                    nnkReturnStmt.newTree(
-                      newEmptyNode()
-                    )
-                  )
-                )
-              )
-            )
-          )
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          newLit("\nDocumented commands (type help <topic>):\n")
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          newLit("========================================\n")
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          nnkCall.newTree(
-            newIdentNode("join"),
-            newIdentNode("docced"),
-            newLit(" \t ")
-          )
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          newLit("\n\nUndocumented commands:\n")
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          newLit("======================\n")
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          nnkCall.newTree(
-            newIdentNode("join"),
-            newIdentNode("undocced"),
-            newLit(" \t ")
-          )
-        ),
-        nnkCall.newTree(
-          newIdentNode("write"),
-          newIdentNode("stdout"),
-          newLit("\n")
-        )
-      )
-    )
+  result.add(quote do:
+    proc help(input: Line): bool =
+      var undocced: seq[string] = `undoccedLit`
+      var docced: seq[string] = `doccedLit`
+      var docs: seq[string] = `docsLit`
+      if isSome(input.args):
+        var cmdarg = pick(input.args, 0)
+        if isSome(cmdarg):
+          var cmd = cmdarg.get
+          if cmd in undocced:
+            write(stdout, "*** No help on for this command")
+          else:
+            for pair in zip(docced, docs):
+              let (docced_cmd, doc) = pair
+              if cmd == docced_cmd:
+                write(stdout, doc)
+                break
+          return
+      write(stdout, "\nDocumented commands (type help <topic>):\n")
+      write(stdout, "========================================\n")
+      write(stdout, join(docced, " \t "))
+      write(stdout, "\n\nUndocumented commands:\n")
+      write(stdout, "======================\n")
+      write(stdout, join(undocced, " \t "))
+      write(stdout, "\n")
   )
 
 
