@@ -16,3 +16,4 @@ requires "nim >= 1.0.0"
 
 task test, "Run the unit tests":
   exec "nim r --hints:off tests/test.nim"
+  exec "nim r --hints:off tests/test_core.nim"
