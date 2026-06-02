@@ -1,6 +1,6 @@
 Loki
 ----
-[![](https://github.com/beshrkayali/loki/workflows/CI/badge.svg)](https://github.com/beshrkayali/loki/actions?query=workflow%3AC)
+[![](https://github.com/beshrkayali/loki/workflows/CI/badge.svg)](https://github.com/beshrkayali/loki/actions?query=workflow%3ACI)
 
 
 **loki**: line oriented (k)ommand interpreter
@@ -45,7 +45,7 @@ myCmd.cmdLoop
 Compile with something like:
 
 ```sh
-nim c --threads:on cmd.nim
+nim c cmd.nim
 ```
 
 And an example run:
@@ -136,6 +136,12 @@ which can be helpful when debugging your code to see what's going on.
 
 
 ### Changelog
+
+### [Unreleased]
+- Remove deprecated `threadpool`; `cmdLoop` is now a plain blocking loop
+  (fixes a busy-wait that spun the CPU while idle)
+- No longer requires `--threads:on`
+- `cmdLoop` no longer takes an unused `intro` argument (use `newLoki(intro=...)`)
 
 ### [0.3.0] Apr 2021
 - Automatically generate TOC and help for handler commands

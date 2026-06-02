@@ -8,7 +8,7 @@ format:
 
 .PHONY: docker-test
 docker-test:
-	docker-compose \
+	docker compose \
 		-f tests/docker-compose.test.yml \
 		-p loki-test \
 		up \

@@ -47,18 +47,12 @@
 ## myCmd.cmdLoop
 ## ```
 
-import os
-import macros
-import rdstdin
-import options
-import strutils
-import sequtils
-import threadpool
+import std/[macros, rdstdin, options, strutils, sequtils]
 
 
 const PROMPT = "(loki) "
 
-type Line* = ref object of RootObj
+type Line* = ref object
   command*: string
   args*: Option[seq[string]]
   text*: string
@@ -153,26 +147,14 @@ proc oneCmd(loki: Loki, line_text: string): bool =
   return loki.handler(newLine(line_text))
 
 
-proc cmdLoop*(loki: Loki, intro: string = "") =
-  var lineFlowVar: FlowVar[string]
-
-  lineFlowVar = spawn input loki
-
+proc cmdLoop*(loki: Loki) =
   write(stdout, loki.intro)
 
-  var stop: bool = false;
+  var stop = false
 
   while not stop:
-    if lineFlowVar.isReady():
-      # precmd
-      stop = loki.oneCmd(^lineFlowVar)
-      # postcmd
-
-      # Respawn
-      if not stop:
-        # FIXME: Hack to prevent eager spawning
-        echo("")
-        lineFlowVar = spawn input loki
+    # precmd / postcmd hooks would go here
+    stop = loki.oneCmd(loki.input())
 
 
 # Macros
