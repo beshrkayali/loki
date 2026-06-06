@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check the tag matches the nimble version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver=$(grep -E '^version' loki.nimble | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ "$tag" != "$ver" ]; then
+            echo "::error::Tag '$GITHUB_REF_NAME' does not match nimble version '$ver'."
+            exit 1
+          fi
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
