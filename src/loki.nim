@@ -26,8 +26,7 @@
 ## --------
 ##
 ## ```nim
-## import loki, strutils, options
-## from sequtils import zip
+## import loki
 ##
 ## loki(myHandler, input):
 ##   do_greet name:
@@ -50,6 +49,10 @@
 ## ```
 
 import std/[macros, rdstdin, options, strutils]
+
+# loki's public API is Option-based (Line.args, pick, handler params), so the
+# Option helpers are re-exported: `import loki` is enough to work with them.
+export options
 
 const PROMPT = "(loki) "
 
@@ -224,36 +227,40 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
       )
     )
 
-  # Generated help / table-of-contents proc.
-  let undoccedLit = strSeqLit(undocced)
+  # Generated help / table-of-contents proc. Everything it needs is known at
+  # macro time: the command lists are baked in as literals and the table-of-
+  # contents lines are pre-joined, so the generated proc pulls in no extra deps
+  # (no zip/join) -- only the Option helpers re-exported above.
   let doccedLit = strSeqLit(docced)
   let docsLit = strSeqLit(docs)
+  let undoccedLit = strSeqLit(undocced)
+  let doccedToc = newLit(docced.join(" \t "))
+  let undoccedToc = newLit(undocced.join(" \t "))
 
   result.add(
     quote do:
       proc help(input: Line): bool =
-        var undocced: seq[string] = `undoccedLit`
-        var docced: seq[string] = `doccedLit`
-        var docs: seq[string] = `docsLit`
         if isSome(input.args):
-          var cmdarg = pick(input.args, 0)
+          let cmdarg = pick(input.args, 0)
           if isSome(cmdarg):
-            var cmd = cmdarg.get
+            let cmd = cmdarg.get
+            let docced: seq[string] = `doccedLit`
+            let docs: seq[string] = `docsLit`
+            let undocced: seq[string] = `undoccedLit`
             if cmd in undocced:
-              write(stdout, "*** No help for this command")
+              writeLine(stdout, "*** No help for this command")
             else:
-              for pair in zip(docced, docs):
-                let (docced_cmd, doc) = pair
-                if cmd == docced_cmd:
-                  write(stdout, doc)
+              for i in 0 ..< docced.len:
+                if cmd == docced[i]:
+                  writeLine(stdout, docs[i])
                   break
             return
         write(stdout, "\nDocumented commands (type help <topic>):\n")
         write(stdout, "========================================\n")
-        write(stdout, join(docced, " \t "))
+        write(stdout, `doccedToc`)
         write(stdout, "\n\nUndocumented commands:\n")
         write(stdout, "======================\n")
-        write(stdout, join(undocced, " \t "))
+        write(stdout, `undoccedToc`)
         write(stdout, "\n")
 
   )
@@ -363,8 +370,6 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
   ## during the interpreter loop.
 
   runnableExamples:
-    import std/[options, strutils]
-    from std/sequtils import zip
     loki(cmdHandler, line):
       do_greet name:
         if isSome(name):

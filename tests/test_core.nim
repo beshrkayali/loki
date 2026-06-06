@@ -1,7 +1,6 @@
 import std/unittest
 
 include "../src/loki.nim"
-from std/sequtils import zip # generated help proc uses zip
 
 suite "newLoki":
   test "applies defaults":

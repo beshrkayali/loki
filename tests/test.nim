@@ -1,7 +1,4 @@
-import unittest, options
-from sequtils import zip
-import strutils
-import loki
+import unittest, strutils, loki # options comes via loki's re-export
 
 test "loki macro generates valid code":
   loki(cmdHandler, line):
