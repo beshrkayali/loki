@@ -58,7 +58,7 @@ And an example run:
 Loki uses the powerful macro system in Nim. Macros in Nim are functions that
 execute at compile-time and can transform a syntax tree into a different one.
 
-The `loki` macro block in the example above would expand into something like this: 
+The `loki` macro block in the example above would expand into something like this:
 
 ```nim
 proc do_greet(line: Line; name: Option[string] = none(string)): bool =
@@ -67,7 +67,7 @@ proc do_greet(line: Line; name: Option[string] = none(string)): bool =
     echo(["Hello ", get(name), "!"])
   else:
     echo(["Hello!"])
-  
+
 proc do_add(line: Line; num1: Option[string] = none(string);
             num2: Option[string] = none(string)): bool =
   if isSome(num1) and isSome(num2):

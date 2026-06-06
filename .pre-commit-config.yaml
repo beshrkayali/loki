@@ -1,0 +1,29 @@
+# Formats and checks files on commit.
+#
+# Setup (once per clone):
+#   nimble install nph     # if not already on PATH
+#   pre-commit install
+#
+# nph rewrites staged Nim files in place; if it changes anything the commit is
+# stopped so you can `git add` the formatted files and commit again.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md] # keep markdown hard line breaks
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: nph
+        name: nph (format Nim)
+        entry: nph
+        language: system
+        files: \.nim$

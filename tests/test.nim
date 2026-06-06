@@ -28,9 +28,5 @@ test "loki macro genereted code shouldnt fail with less args":
       assert(num1.isNone)
       assert(num2.isNone)
   let cmd = newLoki(shouldNotFailHandler)
-  let line = Line(
-    command: "add",
-    args: some(@["0"]),
-    text: "add 0"
-  )
+  let line = Line(command: "add", args: some(@["0"]), text: "add 0")
   discard shouldNotFailHandler(line)

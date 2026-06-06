@@ -2,9 +2,7 @@ NIM_SRC = $(shell find . -type f -regex ".*\.nim")
 
 .PHONY: format
 format:
-	for target in $(NIM_SRC); do \
-		nimpretty $$target; \
-	done
+	nph $(NIM_SRC)
 
 .PHONY: docker-test
 docker-test:

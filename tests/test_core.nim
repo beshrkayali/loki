@@ -5,13 +5,21 @@ from std/sequtils import zip # generated help proc uses zip
 
 suite "newLoki":
   test "applies defaults":
-    let l = newLoki(proc(line: Line): bool = false)
+    let l = newLoki(
+      proc(line: Line): bool =
+        false
+    )
     check l.prompt == "(loki) "
     check l.intro == "\n" # "" & "\n"
     check l.lastcmd == ""
 
   test "keeps a custom intro and prompt":
-    let l = newLoki(proc(line: Line): bool = false, intro = "Welcome", prompt = "> ")
+    let l = newLoki(
+      proc(line: Line): bool =
+        false,
+      intro = "Welcome",
+      prompt = "> ",
+    )
     check l.intro == "Welcome\n"
     check l.prompt == "> "
 
