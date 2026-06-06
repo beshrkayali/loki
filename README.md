@@ -167,7 +167,7 @@ which can be helpful when debugging your code to see what's going on.
 
 ### Changelog
 
-### [Unreleased]
+### [0.4.0] Jun 2026
 - Remove deprecated `threadpool`; `cmdLoop` is now a plain blocking loop
   (fixes a busy-wait that spun the CPU while idle)
 - No longer requires `--threads:on`

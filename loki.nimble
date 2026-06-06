@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.3.0"
+version       = "0.4.0"
 author        = "Beshr Kayali Reinholdsson"
 description   = "A small library for writing cli programs in Nim."
 license       = "Zlib"
