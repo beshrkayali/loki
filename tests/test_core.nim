@@ -1,6 +1,7 @@
 import std/unittest
 
 include "../src/loki.nim"
+from std/sequtils import zip # generated help proc uses zip
 
 suite "newLoki":
   test "applies defaults":
@@ -8,7 +9,6 @@ suite "newLoki":
     check l.prompt == "(loki) "
     check l.intro == "\n" # "" & "\n"
     check l.lastcmd == ""
-    check l.doc_header == "Documented commands (type help <topic>):"
 
   test "keeps a custom intro and prompt":
     let l = newLoki(proc(line: Line): bool = false, intro = "Welcome", prompt = "> ")

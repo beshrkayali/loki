@@ -26,7 +26,9 @@
 ## --------
 ##
 ## ```nim
-## import options
+## import loki, strutils, options
+## from sequtils import zip
+##
 ## loki(myHandler, input):
 ##   do_greet name:
 ##     if isSome(name):
@@ -47,7 +49,7 @@
 ## myCmd.cmdLoop
 ## ```
 
-import std/[macros, rdstdin, options, strutils, sequtils]
+import std/[macros, rdstdin, options, strutils]
 
 
 const PROMPT = "(loki) "
@@ -66,13 +68,13 @@ proc pick*[T](items: Option[seq[T]], idx: int): Option[T] =
   )
 
 proc newLine(line_text: string): Line =
-  let line = line_text.split(' ')
-  let command = line[0]
+  let parts = line_text.splitWhitespace()
+  let command = if parts.len > 0: parts[0] else: ""
 
   var args: Option[seq[string]]
 
-  if line.len > 1:
-    args = some(toSeq line[1..line.len - 1])
+  if parts.len > 1:
+    args = some(parts[1 .. ^1])
   else:
     args = none(seq[string])
 
@@ -92,10 +94,6 @@ type Loki* = ref object
   prompt*: string
   lastcmd*: string
   intro*: string
-  doc_header*: string
-  undoc_header*: string
-  nohelp*: string
-  # completekey*: string
   handler: proc (line: Line): bool
 
 
@@ -109,9 +107,6 @@ proc newLoki*(
     prompt: prompt,
     lastcmd: "",
     intro: intro & "\n",
-    doc_header: "Documented commands (type help <topic>):",
-    undoc_header: "",
-    nohelp: "*** No help on {cmd}",
     handler: handler
   )
 
@@ -284,7 +279,7 @@ proc createdProcDefs(lineVar: NimNode, stmtList: NimNode): seq[NimNode] =
         if isSome(cmdarg):
           var cmd = cmdarg.get
           if cmd in undocced:
-            write(stdout, "*** No help on for this command")
+            write(stdout, "*** No help for this command")
           else:
             for pair in zip(docced, docs):
               let (docced_cmd, doc) = pair
@@ -458,6 +453,8 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
   ## during the interpreter loop.
 
   runnableExamples:
+    import std/[options, strutils]
+    from std/sequtils import zip
     loki(cmdHandler, line):
       do_greet name:
         if isSome(name):
@@ -465,7 +462,7 @@ macro loki*(handlerName: untyped, lineVar: untyped, statements: untyped) =
         else:
           write(stdout, "Hey you!\n")
       do_EOF:
-        quit()
+        return true
 
   result = newStmtList()
   let handlerCasesProcDefs = createdProcDefs(lineVar, statements)
